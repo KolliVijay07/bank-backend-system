@@ -49,7 +49,7 @@ async function createTransaction(req, res) {
     }
 
     const fromUserAccount = await accountModel.findOne({ _id: fromAccount })
-    const toUserAccount = await accountModel.findOne({ _id: toAccount })
+    const toUserAccount = await accountModel.findOne({ _id: toAccount }).populate('user', 'name')
 
     if (!fromUserAccount || !toUserAccount) {
         return res.status(400).json({
@@ -154,7 +154,8 @@ async function createTransaction(req, res) {
         session.endSession()
 
         // 10. Send Email Notification
-        await emailService.sendTransactionEmail(req.user.email, req.user.name, amount, toAccount)
+        const recipientName = toUserAccount.user?.name || toAccount
+        await emailService.sendTransactionEmail(req.user.email, req.user.name, amount, recipientName)
 
         return res.status(201).json({
             message: "Transaction Completed Successfully",
@@ -165,7 +166,8 @@ async function createTransaction(req, res) {
         session.endSession()
         console.error("Transaction Error:", err)
 
-        await emailService.sendTransactionFailureEmail(req.user.email, req.user.name, amount, toAccount)
+        const recipientName = toUserAccount?.user?.name || toAccount
+        await emailService.sendTransactionFailureEmail(req.user.email, req.user.name, amount, recipientName)
 
         return res.status(500).json({ 
             message: "Internal Server Error or Transaction is under processing,if you have intiated payment before"
