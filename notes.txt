@@ -1,0 +1,378 @@
+1.npm init -y
+2.npm i express
+3.create the src/app.js
+
+app.js is used to create the instance of the server & configure the server
+config explains which particular middleware we are using and explains the api being used
+
+4.create server.js in main folder
+server.js will start the server(http) & calls the connectDB func
+
+import + exprort default --> es modules this is new
+require + module.exports --> old commonJs
+
+nodemon server.js
+or 
+npx nodemon server.js
+node package executioner
+npx (Node Package eXecute) is a command-line tool bundled with npm (since version 5.2.0) 
+designed to execute Node.js package binaries without requiring global installation
+ 
+5. install mongoDb & create cluster in mongoDb atlas 
+6. npm i mongoose
+7. create the db/db.js then write the connectDB func db ca also be written as config
+8.create .env to store the secret keys
+9. npm i dotenv
+
+    password: {
+        type: String,
+        required: [ true, "Password is required for creating an account" ],
+        minlength:[ 6, "Password should contain more than 6 character" ],
+        select : false
+    },
+    
+    select false means the password will not come defaultly in any query output unless we queried it
+
+define the schema then 
+we need to hash the password before saving into the dataabse 
+so that we can protect credentials from the data breach 
+to hash we use bcryptjs
+10. npm i bcryptjs
+hash --> irreversible string format
+hash func gives same hash o/p for same i/p
+
+we can do the hash either while creating a DB record 
+or we can create them in the model.schema vy using
+userSchema.pre("save",async function(next){
+     
+})
+create routes/auth.route.js
+create controllers/auth.controller.js
+
+while registering the server need to create the token 
+to create we need jwt
+
+npm i jsonwebtoken
+
+to set token as cookie we need cookieParser
+npm i cookie-parser
+
+const cookieParser = require('cookie-parser')
+const authRoutes = require('./routes/auth.routes')
+
+const app = express()
+app.use(express.json())
+app.use(cookieParser())
+
+we use expres.json and cookieParser as middleware
+const userLoginMethod = await userModel.findOne({email}).select('password')
+
+{
+    "message": "User Logged in Successfully",
+    "userLoginMethod": {
+        "_id": "6abb8f3315d84591c0810fdc"
+    }
+}
+const userLoginMethod = await userModel.findOne({email}).select('+password')
+{
+    "message": "User Logged in Successfully",
+    "userLoginMethod": {
+        "_id": "6abb8f3315d84591c0810fdc",
+        "email": "test@test.com",
+        "name": "user1"
+    }
+}
+
+'password'
+    ↓
+Select password
+    ↓
+BUT schema select:false still excludes it
+
+
+'+password'
+    ↓
+Force/include password
+    ↓
+Overrides select:false
+
+Exactly — this behavior is because of how Mongoose's .select() works. The key point is that:
+
+.select('password') and .select('+password') mean completely different things.
+
+Assuming your schema has:
+
+password: {
+    type: String,
+    select: false
+}
+1. .select('password')
+const userLoginMethod =
+    await userModel.findOne({ email }).select('password');
+
+This means:
+
+"Select only the password field."
+
+But there is a special rule: because password has:
+
+select: false
+
+Mongoose still treats it as excluded unless you explicitly override that exclusion.
+
+Therefore, the result contains only the field that is always included by Mongoose:
+
+{
+    "_id": "6abb8f3315d84591c0810fdc"
+}
+
+So:
+
+.select('password')
+        ↓
+Request ONLY password
+        ↓
+password has select:false
+        ↓
+password remains excluded
+        ↓
+_id remains
+2. .select('+password')
+const userLoginMethod =
+    await userModel.findOne({ email }).select('+password');
+
+The + means:
+
+"Explicitly include password, even though the schema says select: false."
+
+So now Mongoose returns the password too.
+
+However, there's an important detail in your shown response:
+
+{
+    "_id": "6abb8f3315d84591c0810fdc",
+    "email": "test@test.com",
+    "name": "user1"
+}
+
+You don't see password here because your final response is probably doing something like:
+
+res.status(200).json({
+    message: "User Logged in Successfully",
+    userLoginMethod: {
+        _id: userLoginMethod._id,
+        email: userLoginMethod.email,
+        name: userLoginMethod.name
+    }
+});
+
+You are manually choosing which properties to send in the response.
+
+The userLoginMethod variable itself should contain the password.
+
+Try:
+
+console.log(userLoginMethod);
+
+You should see something like:
+
+{
+    _id: ...,
+    email: "test@test.com",
+    name: "user1",
+    password: "$2b$10$........"
+}
+
+
+darkskull10987@gmail.com
+
+we know that mail server uses smtp protocol
+smtp is push protocol
+the transportor 
+the google server which sends the email/email handler - smtp server 
+normal server are the web servers
+but smtp server bit different
+so to intreact with mail server we need transportor
+server are not used always 
+just to contact it we need clientID,secret,gmail,refresh token
+const transporter = nodemailer.createTransport({ // SMTP Server is contacted
+  service: 'gmail',
+  auth: {
+    type: 'OAuth2',
+    user: process.env.EMAIL_USER,
+    clientId: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    refreshToken: process.env.REFRESH_TOKEN,
+  },
+});
+we are creating server uing express and it will contact the smtp server behalf of the us -- transporter
+
+index in the accountModel is done for the faster searching 
+index is done by B+ trees
+
+//compund index
+accountSchema.index({user:1,status:1})
+this is created for more than one field
+
+Compound indexing is performed in backend databases to significantly improve query performance 
+and reduce storage overhead compared to maintaining multiple separate single-field indexes.
+
+Efficient Multi-Field Queries: 
+Compound indexes allow a database to satisfy queries filtering or sorting on multiple columns 
+simultaneously by using a single B-tree structure, eliminating the need to search and merge results from n individual indexes. 
+
+Prefix Support: 
+A compound index on fields (A, B) can also efficiently support queries that filter only on the first field (A), 
+as the data is sorted hierarchically; this often makes separate single-field indexes on A redundant.
+Enforcing Integrity: 
+Compound indexes can enforce uniqueness on combinations of fields (e.g., ensuring a user cannot have duplicate entries 
+for the same friend), which single-field indexes cannot achieve.
+
+Trade-offs: While they accelerate read operations, compound indexes increase storage space requirements and can 
+slow down write operations (INSERT, UPDATE, DELETE) because the index structure must be updated for every data modification. 
+
+protected route
+we need a valid token in cookies or the header section
+
+say there are 2 users 
+user A with ₹1000 
+user B with ₹1200
+now user A wants to tranfer the money from his acc to the user B acc
+whenever we want to send the money first transaction is created in backend
+transaction:
+from-acc A
+to-acc B
+amount-₹100
+idempotencyKey-uniquely generated string
+status-pending (kept pending at the start)
+this is generated for very transaction
+
+this will change to complete afterwards
+ledger-this is kind of register system which conains details about how much money does a user recieved/credited
+and how much money does the a user deposited in a account
+
+In banking, a ledger is the definitive, chronological record of all financial transactions associated with an account, 
+serving as the single source of truth for balances and transaction history.  
+It is an internal accounting system that tracks every debit, credit, deposit, and withdrawal to ensure accuracy, compliance, 
+and trust in financial reporting.
+
+this are understanding but this internally stored in correct format
+Every transaction must have 2 ledgers
+ledger for A
+ledger-A{
+    account:A,
+    amount:₹100,
+    type:debit
+}
+ledger-B{
+    account:B,
+    amount:₹100,
+    type:credit   
+}
+
+whenever this both ledger are completed then the status is changed to the complete
+status:'complete'
+
+4 things are done to send money from 1 one acc to another acc
+1. A transaction was created with status:'pending' (A--->B)
+2. Amount debited from A's acc
+3. Amount credited in B's acc using ledger
+4. transaction status:pending to status:'complete'
+
+we ensure that even if a single step out these 4 was failed then we have to solve that
+say amount was debited but not recieved think of the transaction in DBMS
+roll back ,atomcity
+
+idempotencyKey 
+say we have upi in which we are performing the payment but to network problem the payment was stuck
+so the upi will request the status 
+this also ensures that same payment was not done again for the second time
+
+
+--
+In banking, an idempotency key is a unique identifier (typically a UUID) that a client attaches to a payment 
+or transaction API request so the server can guarantee the operation executes exactly once, even if the request is retried 
+due to network timeouts or failures
+
+
+we do not hardcode the balance 
+we just calculate the balance by adding all (credited amount) - (all debited amount) using the ledger system
+------------------------------
+A problem to me and all students in our college is that there is a big process to get a hostel from the 2nd year.
+The Students first have to apply for the hostel then it takes few days for them to give results for the hostel alloatment 
+based on CPI/CGPA then student have to make payment to the hostel accounts which is done manually and cause a big problem
+then the student have to submit the xerox and the room will be alloated at last.
+
+The above is the situation:
+so tell me the idea to wrap all of this in a web applicaion
+you may include extra things to make it a big project
+the things I need to cover is:
+A side menu which can close and open on 
+1. the form or portal for applying
+2. the window/section to show the result
+3. the payment gateway for paying fees and generating fee reports
+4. the section where the room alloatment details are showed
+5. the section inside the room details should have all 3 roomates basic details
+6. the section for attendence in the hostel
+7. the profile which contains all details of student 
+8. section for comaplaints in the hostel
+8. login page for a student with all neccesary details 
+9. you may include some more
+-------------------------------------------
+
+
+we will create another model called transaction.model.js 
+which records all the process that takes place in the tra process 
+
+
+define routes then 
+app.use(prefix,routes)
+in app.js
+then create the controller
+
+/**
+ * - Create a new transaction
+ * THE 10-STEP TRANSFER FLOW:
+     * 1. Validate request
+     * 2. Validate idempotency key
+     * 3. Check account status
+     * 4. Derive sender balance from ledger
+     * 5. Create transaction (PENDING)
+     * 6. Create DEBIT ledger entry
+     * 7. Create CREDIT ledger entry
+     * 8. Mark transaction COMPLETED
+     * 9. Commit MongoDB session
+     * 10. Send email notification
+ */
+
+ {
+    "email":"system@test.com",
+    "password":"test123",
+    "name":"SYSTEM"
+}
+-----------------
+
+{
+    "email":"alice@test.com",
+    "password":"test123",
+    "name":"Alice"
+}
+{
+    "message": "Account created Successfully!!!",
+    "account": {
+        "user": "6abff267562cc27822abaa70",
+        "status": "ACTIVE",
+        "currency": "INR",
+        "_id": "6abff28b562cc27822abaa71",
+        "createdAt": "2026-10-02T18:06:03.321Z",
+        "updatedAt": "2026-10-02T18:06:03.321Z",
+        "__v": 0
+    }
+}
+
+to work with accounts api's
+user first need to login in authentication api's
+then the req will have token in the cookie section
+we will extract the token from cookie and check for validity and details of the user
+then 
+then only user can fetch balance , fetch all accounts
